@@ -34,15 +34,15 @@ main :: proc() {
 
 	input : string;
 	for {
-		fmt.print("user> ");
 
-		input, exit := readline(line_reader);
+		input, exit := readline(&line_reader);
 		if exit {
 			fmt.println();
 			break;
 		} 
 
 		rep(input);
+//		print_history(&line_reader);
 	}
 }
 

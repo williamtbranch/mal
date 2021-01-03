@@ -1,6 +1,133 @@
 package reader
 
-match_ignored :: proc(input : string) -> (token, the_rest : string) {
+import "core:fmt"
+
+import "../types"
+
+Reader :: struct {
+    tokens : [dynamic]string,
+    position : int,
+}
+
+reader_next :: proc(reader : ^Reader) -> string {
+    if reader.position >= len(reader.tokens) do return "";
+    token := reader.tokens[reader.position];
+    reader.position += 1;
+    return token;
+}
+
+reader_peek :: proc(reader : ^Reader) -> string {
+    if len(reader.tokens) <= reader.position do return "";
+    return reader.tokens[reader.position];
+}
+
+tokenize :: proc(input : string) -> [dynamic]string {
+    token_array : [dynamic]string;
+    token, rest : string;
+    
+    token, rest = match_mal_token(input);
+
+    for ; len(token) > 0; token, rest = match_mal_token(rest)  {
+        append(&token_array, token);
+    }
+
+    return token_array;
+}
+
+read_string :: proc(input : string) -> types.MalType {
+    reader := Reader{tokenize(input), 0};
+    ast : types.MalType = read_form(&reader);
+    return ast;
+}
+
+read_form :: proc(reader : ^Reader) -> types.MalType {
+
+    switch reader_peek(reader) {
+        case "(": return read_list(reader);
+        case : return read_atom(reader);
+    }
+
+    return types.MalType{};
+}
+
+read_list :: proc(reader : ^Reader) -> types.MalList {
+    list := types.MalList{};
+    token: string;
+
+    _ = reader_next(reader); // this should be ignoring a '('
+
+    loop : for {
+        token = reader_peek(reader);
+        if len(token) == 0 {
+            fmt.println("\nERROR: MISSING ')'");
+            return list;
+        }
+        switch token {
+            case ")": break loop;
+            case : append(&list, read_form(reader));
+        }
+    }
+
+    return list;
+}
+
+read_atom :: proc(reader : ^Reader) -> types.MalType {
+
+    token := reader_next(reader);
+
+    is_int, value := string_to_integer(token);
+    if is_int do return value;
+
+    symbol : types.symbol = types.symbol(token);
+    return types.MalType(symbol);
+}
+
+string_to_integer :: proc(the_input : string) -> (is_int : bool, value : int) {
+
+    if len(the_input) == 0 do return false, 0;
+
+    input := the_input;
+    sign := 1;
+    if input[0] == '-' && len(input) > 1 {
+        input = input[1:];
+        sign = -1;
+    }
+
+    value = 0;
+    power := len(input)-1;
+
+    pow :: proc(x, expo : int) -> int {
+        out := 1;
+        for i in 0..expo-1 {
+            out = out*x;
+        }
+        return out;
+    }
+
+    for digit in input {
+        switch digit {
+            case '0' : continue;
+            case '1' : value += 1 * pow(10, power);
+            case '2' : value += 2 * pow(10, power);
+            case '3' : value += 3 * pow(10, power); 
+            case '4' : value += 4 * pow(10, power); 
+            case '5' : value += 5 * pow(10, power); 
+            case '6' : value += 6 * pow(10, power); 
+            case '7' : value += 7 * pow(10, power); 
+            case '8' : value += 8 * pow(10, power); 
+            case '9' : value += 9 * pow(10, power); 
+            case: return false, 0;
+        }
+        power -= 1;
+    }
+
+    value = value*sign;
+
+    //fmt.println("The value is", value);
+    return true, value;
+}
+
+match_ignore :: proc(input : string) -> (token, the_rest : string) {
 
     //default values
     token = input;
@@ -128,7 +255,7 @@ match_common :: proc(input : string) -> (token, the_rest : string) {
         token = input[:index];
         the_rest = input[index:];
         switch {
-            case len(return_token(match_ignored(the_rest))) > 0 : return;
+            case len(return_token(match_ignore(the_rest))) > 0 : return;
             case char == '[' || char == ']' || char == '(' || char == ')' || char == '{' || char == '}':
                 return;
             case char == '\'' || char == '\"' || char == '`' || char == ';': return;
@@ -146,7 +273,7 @@ match_mal_token :: proc(input : string) -> (token, the_rest : string) {
     token = "";
     the_rest = input;
 
-    ignored, not_ignored := match_ignored(input);
+    ignored, not_ignored := match_ignore(input);
 
     if token, the_rest := match_splice_unquote(not_ignored); len(token) > 0 {
         return token, the_rest;
@@ -168,90 +295,3 @@ match_mal_token :: proc(input : string) -> (token, the_rest : string) {
 
     return;
 }
-
-// main :: proc() {
-
-//     string_array : []string = {
-//         "  ,,  \\",
-//         ",  ,, ",
-//         ",  hello world!",
-//         "\t TAB there was a tab there but it was removed",
-//         "\n NEWLINE",
-//         "[]{}()'`~^@ SPECIAL CHARACTERS!!!",
-//         "] closing bracket",
-//         "{ open curly",
-//         "} close curly",
-//         "(def cat 5)",
-//         ") closing paren",
-//         "'quote ",
-//         "` back tick",
-//         "~ wave",
-//         "^ carrot",
-//         "@ at",
-//         "+-*/ some math stuff",
-//         "1542 numbers",
-//         "3.14159 some pi",
-//         "true boolean value",
-//         "false the other boolean",
-//         "3.14hello159 a weird number, but is still a mal token",
-//         "3.14&hello@7 same here",
-//         `"hello \" \"\" worl\"d\" and me too. this string is never ending`,
-//         `" hel\n\tlo \" \"\" \\worl\"d\ same with this one`,
-//         `"happy" go lucky. `,
-//         `    "happier" go luckier`,
-//         `  "happiest\"" go luckiest`,
-//         `""`,
-//         `"`,
-//         "",
-//         "~@ go fast. ",
-//         "`~@ go fast.",
-//         ";jageu'a comment goes on forever",
-//         "euhakj space seperated",
-//         "function( int a )",
-//         "true false",
-//     };
-
-    // print_match :: proc(match_name, token : string) {
-    //     fmt.print("\t"); 
-    //     fmt.print(match_name);
-    //     fmt.print(" \e[47;30m");
-    //     fmt.print(token);
-    //     fmt.print("\e[0m");
-    //     fmt.println();
-    // }
-
-    // for test, index in string_array {
-       
-    //     token, the_rest := match_mal_token(test);
-    //     fmt.print("case ");
-    //     fmt.print(index);
-    //     fmt.print(": \e[42;30m");
-    //     fmt.print(token);
-    //     fmt.print("\e[0m");
-    //     fmt.print(the_rest);
-    //     fmt.println();
-
-        /*
-        if token, the_rest := match_ignored(test); len(token) > 0 {
-            print_match("match_ignored", token);
-            continue;
-        }
-        if token, the_rest := match_splice_unquote(test); len(token) > 0 {
-            print_match("match_splice_unquote", token);
-        }
-        if token, the_rest := match_special(test); len(token) > 0 {
-            print_match("match_special", token);
-        }
-        if token, the_rest := match_string(test); len(token) > 0 {
-            print_match("match_string ", token);
-        }
-        if token, the_rest := match_comment(test); len(token) > 0 {
-            print_match("match_comment", token);
-        }
-        if token, the_rest := match_common(test); len(token) > 0 {
-            print_match("match_common ", token);
-        }
-        */
-
-    //}
-//}

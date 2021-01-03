@@ -3,21 +3,27 @@ package step0
 import "core:fmt"
 
 import "readline"
+import "reader"
+import "types"
+import "printer"
 
-READ :: proc(input : string) -> string {
+READ :: proc(input : string) -> types.MalType {
+	ast := reader.read_string(input);
+	return ast;
+}
+
+EVAL :: proc(input : types.MalType) -> types.MalType {
 	return input;
 }
 
-EVAL :: proc(input : string) -> string {
-	return input;
-}
-
-PRINT :: proc(input : string) {
+PRINT :: proc(input : types.MalType) {
 
 	fmt.println();
-	if len(input) == 0 do return;
 
-	fmt.print(input);
+	output := printer.pr_str(input);
+	if len(output) == 0 do return;
+
+	fmt.print(output);
 	fmt.println();
 }
 
@@ -34,9 +40,8 @@ main :: proc() {
 
 	input : string;
 	for {
-		fmt.print("user> ");
 
-		input, exit := readline(line_reader);
+		input, exit := readline(&line_reader);
 		if exit {
 			fmt.println();
 			break;
@@ -45,4 +50,3 @@ main :: proc() {
 		rep(input);
 	}
 }
-

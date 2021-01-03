@@ -42,7 +42,6 @@ main :: proc() {
 		} 
 
 		rep(input);
-//		print_history(&line_reader);
 	}
 }
 

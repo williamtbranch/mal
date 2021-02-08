@@ -54,7 +54,7 @@ read_list :: proc(reader : ^Reader) -> types.MalList {
     list := types.MalList{};
     token: string;
 
-    _ = reader_next(reader); // this should be ignoring a '('
+    _ = reader_next(reader); // this should be consuming a '('
 
     loop : for {
         token = reader_peek(reader);
@@ -63,7 +63,10 @@ read_list :: proc(reader : ^Reader) -> types.MalList {
             return list;
         }
         switch token {
-            case ")": break loop;
+            case ")": {
+                reader_next(reader);
+                break loop;
+            }
             case : append(&list, read_form(reader));
         }
     }

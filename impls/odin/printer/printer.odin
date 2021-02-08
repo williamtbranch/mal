@@ -45,6 +45,7 @@ int_to_string :: proc(the_input : int) -> string {
 }
 
 pr_str :: proc(ast : types.MalType) -> string {
+    //fmt.println(ast);
     switch t in ast {
         case int : return int_to_string(ast.(int)); 
         case types.symbol: return string(ast.(types.symbol));
@@ -64,6 +65,7 @@ pr_str :: proc(ast : types.MalType) -> string {
 
             return output;
         }
+        case types.nil_type : return "nil";
     }
     return "Somehow the switch doesn't handle one of the types.MalType (in printer.odin pr_str)";
 }
